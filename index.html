@@ -1,0 +1,208 @@
+<html>
+<head>
+    <title>Advanced To-Do List App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .dark-mode {
+            background-color: #1a202c;
+            color: #cbd5e0;
+        }
+        .dark-mode input, .dark-mode select, .dark-mode button {
+            background-color: #2d3748;
+            color: #cbd5e0;
+        }
+        .dark-mode .bg-white {
+            background-color: #2d3748;
+        }
+        .dark-mode .border-gray-300 {
+            border-color: #4a5568;
+        }
+        .dark-mode .text-gray-800 {
+            color: #cbd5e0;
+        }
+        .dark-mode .text-gray-500 {
+            color: #a0aec0;
+        }
+        .dark-mode .bg-gray-200 {
+            background-color: #4a5568;
+        }
+        .dark-mode .bg-gray-500 {
+            background-color: #718096;
+        }
+        .dark-mode .bg-gray-600 {
+            background-color: #4a5568;
+        }
+        .dark-mode .bg-gray-300 {
+            background-color: #2d3748;
+        }
+        .dark-mode .bg-gray-200 {
+            background-color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto p-4">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md mx-auto">
+            <h1 class="text-2xl font-bold text-center mb-4 text-gray-800">Advanced To-Do List</h1>
+            <div class="flex flex-wrap mb-4">
+                <input type="text" id="taskInput" class="flex-grow p-2 border border-gray-300 rounded-l-lg focus:outline-none" placeholder="Add a new task...">
+                <select id="categoryInput" class="p-2 border border-gray-300 focus:outline-none">
+                    <option value="Work">Work</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Urgent">Urgent</option>
+                </select>
+                <select id="priorityInput" class="p-2 border border-gray-300 focus:outline-none">
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+                <input type="date" id="dueDateInput" class="p-2 border border-gray-300 focus:outline-none">
+                <button id="addTaskBtn" class="bg-green-500 text-white p-2 rounded-r-lg hover:bg-green-600 focus:outline-none"><i class="fas fa-plus"></i></button>
+            </div>
+            <div class="flex mb-4">
+                <input type="text" id="searchInput" class="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none" placeholder="Search tasks...">
+                <button id="darkModeToggle" class="bg-gray-500 text-white p-2 rounded-lg hover:bg-gray-600 focus:outline-none ml-2"><i class="fas fa-moon"></i></button>
+            </div>
+            <ul id="taskList" class="space-y-2">
+                <!-- Tasks will be dynamically added here -->
+            </ul>
+            <div class="mt-4">
+                <div class="flex justify-between items-center">
+                    <span id="progressText">0% Completed</span>
+                    <button id="undoBtn" class="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 focus:outline-none"><i class="fas fa-undo"></i></button>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div id="progressBar" class="bg-green-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const taskInput = document.getElementById('taskInput');
+            const categoryInput = document.getElementById('categoryInput');
+            const priorityInput = document.getElementById('priorityInput');
+            const dueDateInput = document.getElementById('dueDateInput');
+            const addTaskBtn = document.getElementById('addTaskBtn');
+            const taskList = document.getElementById('taskList');
+            const searchInput = document.getElementById('searchInput');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const progressText = document.getElementById('progressText');
+            const progressBar = document.getElementById('progressBar');
+            const undoBtn = document.getElementById('undoBtn');
+
+            let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+            let lastAction = null;
+            let editIndex = null;
+
+            function renderTasks() {
+                taskList.innerHTML = '';
+                const filteredTasks = tasks.filter(task => task.text.toLowerCase().includes(searchInput.value.toLowerCase()));
+                filteredTasks.forEach((task, index) => {
+                    const li = document.createElement('li');
+                    li.className = `flex justify-between items-center p-2 border border-gray-300 rounded-lg ${task.completed ? 'bg-gray-200' : 'bg-white'}`;
+                    li.innerHTML = `
+                        <div>
+                            <span class="${task.completed ? 'line-through text-gray-500' : 'text-gray-800'}">${task.text}</span>
+                            <span class="text-sm text-gray-500">(${task.category}, ${task.priority}, Due: ${task.dueDate})</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="edit text-blue-500 hover:text-blue-600 focus:outline-none"><i class="fas fa-edit"></i></button>
+                            <button class="complete text-green-500 hover:text-green-600 focus:outline-none"><i class="fas fa-check"></i></button>
+                            <button class="delete text-red-500 hover:text-red-600 focus:outline-none"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                    taskList.appendChild(li);
+
+                    li.querySelector('.edit').addEventListener('click', () => {
+                        taskInput.value = task.text;
+                        categoryInput.value = task.category;
+                        priorityInput.value = task.priority;
+                        dueDateInput.value = task.dueDate;
+                        editIndex = index;
+                    });
+
+                    li.querySelector('.complete').addEventListener('click', () => {
+                        tasks[index].completed = !tasks[index].completed;
+                        saveTasks();
+                        renderTasks();
+                    });
+
+                    li.querySelector('.delete').addEventListener('click', () => {
+                        lastAction = { action: 'delete', task: tasks[index] };
+                        tasks.splice(index, 1);
+                        saveTasks();
+                        renderTasks();
+                    });
+                });
+                updateProgress();
+            }
+
+            function saveTasks() {
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            }
+
+            function updateProgress() {
+                const completedTasks = tasks.filter(task => task.completed).length;
+                const totalTasks = tasks.length;
+                const progress = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
+                progressText.innerText = `${Math.round(progress)}% Completed`;
+                progressBar.style.width = `${progress}%`;
+            }
+
+            addTaskBtn.addEventListener('click', () => {
+                const taskText = taskInput.value.trim();
+                const category = categoryInput.value;
+                const priority = priorityInput.value;
+                const dueDate = dueDateInput.value;
+                if (taskText !== '') {
+                    if (editIndex !== null) {
+                        tasks[editIndex] = { text: taskText, category, priority, dueDate, completed: false };
+                        editIndex = null;
+                    } else {
+                        tasks.push({ text: taskText, category, priority, dueDate, completed: false });
+                    }
+                    saveTasks();
+                    renderTasks();
+                    taskInput.value = '';
+                    categoryInput.value = 'Work';
+                    priorityInput.value = 'Low';
+                    dueDateInput.value = '';
+                }
+            });
+
+            searchInput.addEventListener('input', renderTasks);
+
+            darkModeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+            });
+
+            undoBtn.addEventListener('click', () => {
+                if (lastAction) {
+                    if (lastAction.action === 'delete') {
+                        tasks.push(lastAction.task);
+                    }
+                    lastAction = null;
+                    saveTasks();
+                    renderTasks();
+                }
+            });
+
+            renderTasks();
+        });
+    </script>
+</body>
+</html>
